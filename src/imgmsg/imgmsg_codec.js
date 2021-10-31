@@ -144,6 +144,17 @@ var ImgMsgCodec = function (encodeProgressUpdate, decodeProgressUpdate) {
         return header;
     }
 
+    async function compressAndEncrypt(msg, pwd) {
+        msg = LZString.compressToUint8Array(msg);
+        const [r] = await encrypt(msg, pwd);
+        return r;
+    }
+
+    async function decryptAndUncompress(encmsg, hash, iv) {
+        let msg = await decrypt(encmsg, hash, iv);
+        return LZString.decompressFromUint8Array(msg);
+    }
+
     function decodeHeader(header) {
         const utf8 = toUtf8String(header);
         let length = 0;
@@ -160,6 +171,13 @@ var ImgMsgCodec = function (encodeProgressUpdate, decodeProgressUpdate) {
     }
 
     const ImgMsgCodec = {
+        compressAndEncrypt: async function (msg, pwd) {
+            return compressAndEncrypt(msg, pwd);
+        },
+        decryptAndUncompress: async function (msg, pwd) {
+            const [hash, iv] = await preprocess(pwd);
+            return decryptAndUncompress(msg, hash, iv);
+        },
         encode: async function (img, msg, pwd, type = "12") {
             await encodeProgressUpdate(0.1);
 
@@ -170,11 +188,12 @@ var ImgMsgCodec = function (encodeProgressUpdate, decodeProgressUpdate) {
             const eccType = type[0];
             const scatterType = type[1];
 
-            msg = LZString.compressToUint8Array(msg);
+            let r = msg;
+            if (!(r instanceof Uint8Array)) {
+                r = await compressAndEncrypt(msg, pwd);
+            }
 
             await encodeProgressUpdate(0.28);
-
-            const [r] = await encrypt(msg, pwd);
 
             const header = encodeHeader(r.length, type);
             const [h, i] = await encrypt(header, pwd + lengthsuffix);
@@ -328,11 +347,9 @@ var ImgMsgCodec = function (encodeProgressUpdate, decodeProgressUpdate) {
             } else {
             }
 
-            let msg = await decrypt(encmsg, hash, iv);
-
             await decodeProgressUpdate(0.64);
 
-            msg = LZString.decompressFromUint8Array(msg);
+            const msg = decryptAndUncompress(encmsg, hash, iv);
 
             await decodeProgressUpdate(0.82);
 

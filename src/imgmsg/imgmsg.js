@@ -20,10 +20,8 @@
 
 const ImgMsgCodec = require('./imgmsg_codec')
 
-var ImgMsg = function (webgl, canvas, image, optECC = true, optGN = false) {
+var ImgMsg = function (webgl, canvas, optECC = true, optGN = false) {
     const maxDim = 1024;
-
-    let firstLoad = true;
 
     const context = canvas.getContext('2d');
     const gl = webgl.getContext("webgl", {
@@ -50,13 +48,9 @@ var ImgMsg = function (webgl, canvas, image, optECC = true, optGN = false) {
         return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
 
-    function transferCanvasToImage() {
-        image.src = canvas.toDataURL('image/png', 1);
-    }
-
-    async function drawImageOnCanvas(img) {
-        let width = img.naturalWidth;
-        let height = img.naturalHeight;
+    async function drawImageOnCanvas(img, scale = 1) {
+        let width = img.naturalWidth * scale;
+        let height = img.naturalHeight * scale;
 
         if (width > height) {
             if (width > maxDim) {
@@ -96,13 +90,6 @@ var ImgMsg = function (webgl, canvas, image, optECC = true, optGN = false) {
         } catch {
             context.drawImage(img, 0, 0, width, height);
         }
-
-        if (firstLoad) {
-            firstLoad = false;
-            transferCanvasToImage();
-        } else {
-            transferCanvasToImage();
-        }
     }
 
     const codec = ImgMsgCodec();
@@ -118,9 +105,13 @@ var ImgMsg = function (webgl, canvas, image, optECC = true, optGN = false) {
                 }
             } catch {
                 try {
-                    await navigator.clipboard.writeText(image.src);
+                    await navigator.clipboard.writeText(canvas.toDataURL('image/png', 1));
                 } catch { }
             }
+        },
+
+        clearCanvas: function () {
+            context.clearRect(0, 0, context.canvas.width, context.canvas.height);
         },
 
         drawImageOnCanvas: drawImageOnCanvas,
@@ -140,6 +131,13 @@ var ImgMsg = function (webgl, canvas, image, optECC = true, optGN = false) {
             e.target.value = null;
         },
 
+        compressAndEncrypt: async function (message, key) {
+            return codec.compressAndEncrypt(message, key);
+        },
+        decryptAndUncompress: async function (message, key) {
+            return codec.decryptAndUncompress(message, key);
+        },
+
         encode: async function (message, key) {
             const width = canvas.width;
             const height = canvas.height;
@@ -152,12 +150,12 @@ var ImgMsg = function (webgl, canvas, image, optECC = true, optGN = false) {
                 const type = (optECC ? '1' : '0') + (optGN ? '3' : '2');
                 await codec.encode(img, message, key, type);
                 context.putImageData(img, 0, 0);
-                transferCanvasToImage();
             } catch (err) {
                 if (err.code == 1) {
-                    throw(`Encoded message of ${numberWithCommas(err.data.encodedSize)} bytes is too large.\nThe current image size is ${img.width} x ${img.height} pixels and can store ${numberWithCommas(err.data.availableSize)} bytes in the selected code type.\nTransparent pixels cannot store hidden data.\nMaximum supported image size is ${maxDim} x ${maxDim} pixels.`);
+                    err.message = `Encoded message of ${numberWithCommas(err.data.encodedSize)} bytes is too large.\nThe current image size is ${img.width} x ${img.height} pixels and can store ${numberWithCommas(err.data.availableSize)} bytes in the selected code type.\nTransparent pixels cannot store hidden data.\nMaximum supported image size is ${maxDim} x ${maxDim} pixels.`;
+                    throw err;
                 } else {
-                    throw('Could not encode message: ' + err.toString());
+                    throw ('Could not encode message: ' + err.toString());
                 }
             }
 
@@ -178,7 +176,7 @@ var ImgMsg = function (webgl, canvas, image, optECC = true, optGN = false) {
                 const [msg, opts] = await codec.decode(img, key)
                 message = msg;
             } catch (err) {
-                throw("Incorrect key or image.");
+                throw ("Incorrect key or image.");
             }
 
             return message;
