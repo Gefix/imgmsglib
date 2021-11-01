@@ -20,7 +20,7 @@
 
 const ImgMsgCodec = require('./imgmsg_codec')
 
-var ImgMsg = function (webgl, canvas, optECC = true, optGN = false) {
+var ImgMsg = function (webgl, canvas, optECC = true, optGN = false, hashCycles = 256) {
     const maxDim = 1024;
 
     const context = canvas.getContext('2d');
@@ -92,7 +92,7 @@ var ImgMsg = function (webgl, canvas, optECC = true, optGN = false) {
         }
     }
 
-    const codec = ImgMsgCodec();
+    const codec = ImgMsgCodec(hashCycles);
 
     const ImgMsg = {
         copyToClipboard: async function () {

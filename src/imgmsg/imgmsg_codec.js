@@ -57,10 +57,11 @@ const ImgMsgScatter = require('./imgmsg_scatter');
 const Golay = require('./golay');
 const LZString = require('./lz-string');
 
-var ImgMsgCodec = function (encodeProgressUpdate, decodeProgressUpdate) {
+var ImgMsgCodec = function (hashCycles, encodeProgressUpdate, decodeProgressUpdate) {
     const ECC_TYPE_NO = '0';
     const ECC_TYPE_G24 = '1';
 
+    hashCycles = +hashCycles || 256;
     encodeProgressUpdate = encodeProgressUpdate || (() => { });
     decodeProgressUpdate = decodeProgressUpdate || (() => { });
 
@@ -88,7 +89,7 @@ var ImgMsgCodec = function (encodeProgressUpdate, decodeProgressUpdate) {
 
     async function hashcrypt(pws) {
         let hash = pws;
-        for (let i = 0; i < 256; i++) {
+        for (let i = 0; i < hashCycles; i++) {
             const second_hash_length = hash.length + pws.length + 1;
             const second_hash = new Uint8Array(second_hash_length);
             second_hash.set(hash);

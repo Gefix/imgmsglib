@@ -18,7 +18,7 @@ export class ImgMsgCodec {
 		decode: (key: any) => Promise<string>;
 	};
 
-	constructor(template: HTMLImageElement, maxScale: number = 16) {
+	constructor(template: HTMLImageElement, maxScale: number = 16, ecc = true, gaussian = false, difficulty = 256) {
 		this.template = template;
 		this.maxScale = maxScale;
 
@@ -30,7 +30,7 @@ export class ImgMsgCodec {
 		this.canvas.width = 256;
 		this.canvas.height = 256;
 
-		this.imgMsg = ImgMsg(this.webgl, this.canvas);
+		this.imgMsg = ImgMsg(this.webgl, this.canvas, ecc, gaussian, difficulty);
 	}
 
 	async encode(message: string, key: string): Promise<HTMLCanvasElement | string> {
@@ -84,7 +84,7 @@ export class ImgMsgCodec {
 		this.clearCanvas();
 	}
 
-	async decodeFromClipboard(event: ClipboardEvent, key: string): Promise<string> {
+	async decodeFromClipboard(key: string, event?: ClipboardEvent): Promise<string> {
 		let el: any = event?.clipboardData?.getData('text/plain') || null;
 
 		if (el && !this.stringIsImage(el)) {
@@ -94,12 +94,15 @@ export class ImgMsgCodec {
 		let file: File | Blob = event?.clipboardData?.files[0] || null;
 
 		if (el === null && file === null) {
-			const clipboardItems: Array<ClipboardItem> = await (window as any).navigator.clipboard.read();
+			const clipboardItems: Array<ClipboardItem> = await (window as any).navigator?.clipboard?.read?.() || [];
 
 			for (const clipboardItem of clipboardItems) {
 				for (const type of clipboardItem.types) {
+					if (type.startsWith('text/')) {
+						el = await (await clipboardItem.getType(type)).text();
+					}
 					if (type.startsWith('image/')) {
-						file = await clipboardItems[0].getType(type);
+						file = await clipboardItem.getType(type);
 						break;
 					}
 				}
@@ -111,6 +114,10 @@ export class ImgMsgCodec {
 
 		if (file !== null) {
 			el = file;
+		}
+
+		if (!el) {
+			throw ("Could not read clipboard.");
 		}
 
 		const message = await this.decode(el, key);
@@ -138,7 +145,7 @@ export class ImgMsgCodec {
 			img.style.background = 'none!important';
 			img.crossOrigin = 'anonymous';
 			img.onerror = () => {
-				reject('could not load image');
+				reject('Could not load image.');
 			};
 			img.onload = async () => {
 				await this.imgMsg.drawImageOnCanvas(img);
