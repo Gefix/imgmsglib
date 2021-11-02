@@ -24,6 +24,7 @@ var ImgMsg = function (webgl, canvas, optECC = true, optGN = false, hashCycles =
     const maxDim = 1024;
 
     const context = canvas.getContext('2d');
+
     const gl = webgl.getContext("webgl", {
         preserveDrawingBuffer: true,
         premultipliedAlpha: false,
@@ -48,7 +49,7 @@ var ImgMsg = function (webgl, canvas, optECC = true, optGN = false, hashCycles =
         return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
 
-    async function drawImageOnCanvas(img, scale = 1) {
+    async function drawImageOnCanvas(img, scale = 1, captions = []) {
         let width = img.naturalWidth * scale;
         let height = img.naturalHeight * scale;
 
@@ -67,6 +68,13 @@ var ImgMsg = function (webgl, canvas, optECC = true, optGN = false, hashCycles =
         canvas.width = width;
         canvas.height = height;
         context.clearRect(0, 0, width, height);
+
+        context.imageSmoothingEnabled = false;
+        context.mozImageSmoothingEnabled = false;
+        context.oImageSmoothingEnabled = false;
+        context.webkitImageSmoothingEnabled = false;
+        context.msImageSmoothingEnabled = false;
+        context.textRendering = 'geometricPrecision';
 
         try {
             if (width == img.naturalWidth && height == img.naturalHeight) {
@@ -89,6 +97,23 @@ var ImgMsg = function (webgl, canvas, optECC = true, optGN = false, hashCycles =
             }
         } catch {
             context.drawImage(img, 0, 0, width, height);
+        }
+
+        try {
+            context.setTransform(scale, 0, 0, scale, 0, 0);
+            for (caption of captions) {
+                const x = caption.x >= 0 ? caption.x : img.naturalWidth + caption.x;
+                const y = caption.y >= 0 ? caption.y : img.naturalHeight + caption.y;
+
+                context.font = caption.font || context.font;
+                context.fillStyle = caption.style || context.fillStyle;
+                context.textAlign = caption.align || context.textAlign;
+                context.textBaseline = caption.baseline || context.textBaseline;
+
+                context.fillText(caption.text, x, y);
+            }
+        } finally {
+            context.setTransform(1, 0, 0, 1, 0, 0);
         }
     }
 
