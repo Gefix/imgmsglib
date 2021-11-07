@@ -1,6 +1,6 @@
 {
   "name": "imgmsglib",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Transforms text to and from image using steganography",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -34,6 +34,7 @@
     "typescript": "^4.2.3"
   },
   "dependencies": {
-    "base64-arraybuffer": "^1.0.1"
+    "base64-arraybuffer": "^1.0.1",
+    "fflate": "^0.7.1"
   }
 }

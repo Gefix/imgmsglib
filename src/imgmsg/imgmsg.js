@@ -176,7 +176,7 @@ var ImgMsg = function (webgl, canvas, optECC = true, optGN = false, hashCycles =
             img.data.set(new Uint8ClampedArray(logo.data));
 
             try {
-                const type = (optECC ? '1' : '0') + (optGN ? '3' : '2');
+                const type = (optECC ? '3' : '2') + (optGN ? '3' : '2');
                 await codec.encode(img, message, key, type);
                 context.putImageData(img, 0, 0);
             } catch (err) {

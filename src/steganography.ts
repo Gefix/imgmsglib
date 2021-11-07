@@ -25,8 +25,8 @@ export class ImgMsgCodec {
 		clearCanvas: () => void;
 		drawImageOnCanvas: (img: any, scale?: number, captions?: Caption[], onDraw?: OnDrawCallback) => Promise<void>;
 		browseImage: (e: any) => void;
-		compressAndEncrypt: (msg: string, pwd: string) => Promise<Uint8Array>;
-		decryptAndUncompress: (msg: Uint8Array, pwd: string) => Promise<string>;
+		compressAndEncrypt: (msg: string, pwd: string, compType?: string) => Promise<Uint8Array>;
+		decryptAndUncompress: (msg: Uint8Array, pwd: string, compType?: string) => Promise<string>;
 		encode: (message: any, key: any) => Promise<HTMLCanvasElement>;
 		decode: (key: any) => Promise<string>;
 	};

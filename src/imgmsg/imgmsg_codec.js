@@ -56,10 +56,14 @@
 const ImgMsgScatter = require('./imgmsg_scatter');
 const Golay = require('./golay');
 const LZString = require('./lz-string');
+const fflate = require('fflate');
 
 var ImgMsgCodec = function (hashCycles, encodeProgressUpdate, decodeProgressUpdate) {
     const ECC_TYPE_NO = '0';
     const ECC_TYPE_G24 = '1';
+
+    const COMP_TYPE_LZ = '0';
+    const COMP_TYPE_FF = '1';
 
     hashCycles = +hashCycles || 256;
     encodeProgressUpdate = encodeProgressUpdate || (() => { });
@@ -145,15 +149,35 @@ var ImgMsgCodec = function (hashCycles, encodeProgressUpdate, decodeProgressUpda
         return header;
     }
 
-    async function compressAndEncrypt(msg, pwd) {
-        msg = LZString.compressToUint8Array(msg);
+    async function compressAndEncrypt(msg, pwd, compType) {
+        switch (compType) {
+            case COMP_TYPE_LZ:
+                msg = LZString.compressToUint8Array(msg);
+                break;
+            case COMP_TYPE_FF:
+                msg = fflate.compressSync(fflate.strToU8(msg));
+                break;
+            default:
+                msg = fflate.strToU8(msg);
+        }
         const [r] = await encrypt(msg, pwd);
         return r;
     }
 
-    async function decryptAndUncompress(encmsg, hash, iv) {
-        let msg = await decrypt(encmsg, hash, iv);
-        return LZString.decompressFromUint8Array(msg);
+    async function decryptAndUncompress(encmsg, hash, iv, compType) {
+        const decmsg = await decrypt(encmsg, hash, iv);
+        let msg = "";
+        switch (compType) {
+            case COMP_TYPE_LZ:
+                msg = LZString.decompressFromUint8Array(decmsg);
+                break;
+            case COMP_TYPE_FF:
+                msg = fflate.strFromU8(fflate.decompressSync(decmsg));
+                break;
+            default:
+                msg = fflate.strFromU8(decmsg);
+        }
+        return msg;
     }
 
     function decodeHeader(header) {
@@ -172,12 +196,12 @@ var ImgMsgCodec = function (hashCycles, encodeProgressUpdate, decodeProgressUpda
     }
 
     const ImgMsgCodec = {
-        compressAndEncrypt: async function (msg, pwd) {
-            return compressAndEncrypt(msg, pwd);
+        compressAndEncrypt: async function (msg, pwd, compType = COMP_TYPE_FF) {
+            return compressAndEncrypt(msg, pwd, compType);
         },
-        decryptAndUncompress: async function (msg, pwd) {
+        decryptAndUncompress: async function (msg, pwd, compType = COMP_TYPE_FF) {
             const [hash, iv] = await preprocess(pwd);
-            return decryptAndUncompress(msg, hash, iv);
+            return decryptAndUncompress(msg, hash, iv, compType);
         },
         encode: async function (img, msg, pwd, type = "12") {
             await encodeProgressUpdate(0.1);
@@ -186,12 +210,13 @@ var ImgMsgCodec = function (hashCycles, encodeProgressUpdate, decodeProgressUpda
             const height = img.height;
             const data = img.data;
 
-            const eccType = type[0];
+            const eccType = "" + ((type[0] - "0") % 2);
+            const compType = "" + (((type[0] - "0") % 4) >> 1);
             const scatterType = type[1];
 
             let r = msg;
             if (!(r instanceof Uint8Array)) {
-                r = await compressAndEncrypt(msg, pwd);
+                r = await compressAndEncrypt(msg, pwd, compType);
             }
 
             await encodeProgressUpdate(0.28);
@@ -324,7 +349,8 @@ var ImgMsgCodec = function (hashCycles, encodeProgressUpdate, decodeProgressUpda
 
             const [encmsglen, type] = decodeHeader(lengthtext);
 
-            const eccType = type[0];
+            const eccType = "" + ((type[0] - "0") % 2);
+            const compType = "" + (((type[0] - "0") % 4) >> 1);
             const scatterType = type[1];
 
             const max_size = generator.freeSpace(scatterType) >> 3;
@@ -350,7 +376,7 @@ var ImgMsgCodec = function (hashCycles, encodeProgressUpdate, decodeProgressUpda
 
             await decodeProgressUpdate(0.64);
 
-            const msg = decryptAndUncompress(encmsg, hash, iv);
+            const msg = decryptAndUncompress(encmsg, hash, iv, compType);
 
             await decodeProgressUpdate(0.82);
 
