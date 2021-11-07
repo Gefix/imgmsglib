@@ -49,7 +49,7 @@ var ImgMsg = function (webgl, canvas, optECC = true, optGN = false, hashCycles =
         return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
 
-    async function drawImageOnCanvas(img, scale = 1, captions = []) {
+    async function drawImageOnCanvas(img, scale = 1, captions = [], onDraw = null) {
         let width = img.naturalWidth * scale;
         let height = img.naturalHeight * scale;
 
@@ -111,6 +111,10 @@ var ImgMsg = function (webgl, canvas, optECC = true, optGN = false, hashCycles =
                 context.textBaseline = caption.baseline || context.textBaseline;
 
                 context.fillText(caption.text, x, y);
+            }
+
+            if (onDraw) {
+                await onDraw(context, gl);
             }
         } finally {
             context.setTransform(1, 0, 0, 1, 0, 0);

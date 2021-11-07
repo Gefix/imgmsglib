@@ -12,6 +12,8 @@ type Caption = {
 	baseline?: "top" | "hanging" | "middle" | "alphabetic" | "ideographic" | "bottom"
 }
 
+type OnDrawCallback = (canvasContext: CanvasRenderingContext2D, webglContext: WebGLRenderingContext) => Promise<void>;
+
 export class ImgMsgCodec {
 	webgl: HTMLCanvasElement;
 	canvas: HTMLCanvasElement;
@@ -21,7 +23,7 @@ export class ImgMsgCodec {
 	imgMsg: {
 		copyToClipboard: () => Promise<void>;
 		clearCanvas: () => void;
-		drawImageOnCanvas: (img: any, scale?: number, captions?: Caption[]) => Promise<void>;
+		drawImageOnCanvas: (img: any, scale?: number, captions?: Caption[], onDraw?: OnDrawCallback) => Promise<void>;
 		browseImage: (e: any) => void;
 		compressAndEncrypt: (msg: string, pwd: string) => Promise<Uint8Array>;
 		decryptAndUncompress: (msg: Uint8Array, pwd: string) => Promise<string>;
@@ -44,14 +46,14 @@ export class ImgMsgCodec {
 		this.imgMsg = ImgMsg(this.webgl, this.canvas, ecc, gaussian, difficulty);
 	}
 
-	async encode(message: string, key: string, captions?: Caption[]): Promise<HTMLCanvasElement | string> {
+	async encode(message: string, key: string, captions?: Caption[], onDraw?: OnDrawCallback): Promise<HTMLCanvasElement | string> {
 		let scale = 1;
 
 		const encryptedMessage = await this.imgMsg.compressAndEncrypt(message, key);
 
 		do {
 			try {
-				await this.imgMsg.drawImageOnCanvas(this.template, scale, captions);
+				await this.imgMsg.drawImageOnCanvas(this.template, scale, captions, onDraw);
 				return await this.imgMsg.encode(encryptedMessage, key);
 			} catch (err) {
 				if (err.code === 1 && this.canvas.width === this.template.width * scale) {
@@ -84,8 +86,8 @@ export class ImgMsgCodec {
 		}
 	}
 
-	async encodeToClipboard(message: string, key: string, captions?: Caption[]) {
-		const data = await this.encode(message, key, captions);
+	async encodeToClipboard(message: string, key: string, captions?: Caption[], onDraw?: OnDrawCallback) {
+		const data = await this.encode(message, key, captions, onDraw);
 		if (typeof data === 'string') {
 			await navigator.clipboard.writeText(data);
 		} else {
