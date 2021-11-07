@@ -279,7 +279,7 @@ var ImgMsgCodec = function (hashCycles, encodeProgressUpdate, decodeProgressUpda
 
                     const xor = 1 << (b);
 
-                    const o = (y * img.width + x) * 4 + c;
+                    const o = (y * width + x) * 4 + c;
 
                     if (cd % 2 == 1) {
                         data[o] |= xor;
