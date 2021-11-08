@@ -128,14 +128,11 @@ var ImgMsg = function (webgl, canvas, optECC = true, optGN = false, hashCycles =
             try {
                 const permissionStatus = await navigator.permissions.query({ name: 'clipboard-write' });
                 if (permissionStatus.state === 'granted') {
-                    canvas.toBlob(async function (blob) {
-                        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-                    }, 'image/png');
+                    const blob = await new Promise(resolve => canvas.toBlob(resolve), 'image/png');
+                    await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
                 }
             } catch {
-                try {
-                    await navigator.clipboard.writeText(canvas.toDataURL('image/png', 1));
-                } catch { }
+                await navigator.clipboard.writeText(canvas.toDataURL('image/png', 1));
             }
         },
 
