@@ -20,30 +20,32 @@
 
 const ImgMsgCodec = require('./imgmsg_codec')
 
-var ImgMsg = function (webgl, canvas, optECC = true, optGN = false, hashCycles = 256) {
+var ImgMsg = function (webgl, canvas, optECC = true, optGN = false, hashCycles = 256, optST = false) {
     const maxDim = 1024;
 
     const context = canvas.getContext('2d');
 
-    const gl = webgl.getContext("webgl", {
+    const gl = optST ? webgl.getContext("webgl", {
         preserveDrawingBuffer: true,
         premultipliedAlpha: false,
         alpha: true,
         antialias: false,
         depth: false
-    });
+    }) : null;
 
-    gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
+    if (optST) {
+        gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
 
-    const texture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        const texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 
-    const framebuffer = gl.createFramebuffer();
-    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+        const framebuffer = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+    }
 
     function numberWithCommas(x) {
         return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -70,14 +72,13 @@ var ImgMsg = function (webgl, canvas, optECC = true, optGN = false, hashCycles =
         context.clearRect(0, 0, width, height);
 
         context.imageSmoothingEnabled = false;
-        context.mozImageSmoothingEnabled = false;
         context.oImageSmoothingEnabled = false;
         context.webkitImageSmoothingEnabled = false;
         context.msImageSmoothingEnabled = false;
         context.textRendering = 'geometricPrecision';
 
         try {
-            if (width == img.naturalWidth && height == img.naturalHeight) {
+            if (optST && width == img.naturalWidth && height == img.naturalHeight) {
                 gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
                 const data = new Uint8Array(width * height * 4);
                 gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data);
