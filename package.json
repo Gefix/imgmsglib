@@ -34,7 +34,7 @@
     "typescript": "^4.2.3"
   },
   "dependencies": {
-    "base64-arraybuffer": "^1.0.1",
+    "base64-arraybuffer-es6": "^0.7.0",
     "fflate": "^0.7.1"
   }
 }

@@ -1,6 +1,21 @@
-import * as base64 from 'base64-arraybuffer';
+import * as base64 from 'base64-arraybuffer-es6';
 
 import * as ImgMsg from './imgmsg/imgmsg';
+
+interface ClipboardItem {
+	readonly types: string[];
+	readonly presentationStyle: "unspecified" | "inline" | "attachment";
+	getType(type: string): Promise<Blob>;
+}
+
+interface ClipboardItemData {
+	[mimeType: string]: Blob | string | Promise<Blob | string>;
+}
+
+declare var ClipboardItem: {
+	prototype: ClipboardItem;
+	new(itemData: ClipboardItemData): ClipboardItem;
+};
 
 type Caption = {
 	text: string,
